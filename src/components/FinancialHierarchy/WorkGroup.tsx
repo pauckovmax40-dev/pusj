@@ -1,7 +1,6 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { HierarchicalWorkGroup } from '../../types/financialHierarchy'
-import { CollapsibleHeader, FinancialTotals } from './shared'
-import { PositionGroup } from './PositionGroup'
+import { UnifiedWorkGroup } from '../common/UnifiedHierarchyComponents'
 
 interface WorkGroupProps {
   group: HierarchicalWorkGroup
@@ -14,37 +13,34 @@ export const WorkGroup: React.FC<WorkGroupProps> = ({
   onItemQuantityChange,
   onSelectMotor,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(true)
+  const positions = group.positions.map(pos => ({
+    id: pos.id,
+    baseItemName: pos.baseItemName,
+    incomeItems: pos.incomeGroup.items.map(item => ({
+      id: item.id,
+      itemName: item.itemName,
+      quantity: item.quantity,
+      price: item.unitPrice,
+      totalAmount: item.totalAmount,
+    })),
+    expenseItems: pos.expenseGroup.items.map(item => ({
+      id: item.id,
+      itemName: item.itemName,
+      quantity: item.quantity,
+      price: item.unitPrice,
+      totalAmount: item.totalAmount,
+    })),
+  }))
 
   return (
     <div className="border-l-4 border-blue-400 pl-4">
-      <CollapsibleHeader
-        isExpanded={isExpanded}
-        toggle={() => setIsExpanded(!isExpanded)}
-        className="py-2 px-2 hover:bg-blue-50 rounded"
-      >
-        <h2 className="text-sm font-medium text-gray-800 flex-grow min-w-0">
-          {group.workGroup}
-        </h2>
-        <FinancialTotals
-          income={group.totalIncome}
-          expense={group.totalExpense}
-          profit={group.totalProfit}
-        />
-      </CollapsibleHeader>
-
-      {isExpanded && (
-        <div className="mt-2 space-y-2 pl-4">
-          {group.positions.map((pos) => (
-            <PositionGroup
-              key={pos.id}
-              group={pos}
-              onItemQuantityChange={onItemQuantityChange}
-              onSelectMotor={onSelectMotor}
-            />
-          ))}
-        </div>
-      )}
+      <UnifiedWorkGroup
+        workGroup={group.workGroup}
+        positions={positions}
+        mode="edit"
+        onQuantityChange={onItemQuantityChange}
+        onSelectMotor={onSelectMotor}
+      />
     </div>
   )
 }

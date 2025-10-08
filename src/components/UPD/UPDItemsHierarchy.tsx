@@ -1,37 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { AvailableReceptionItem } from '../../services/updService';
+import { UnifiedWorkGroup } from '../common/UnifiedHierarchyComponents';
+import { formatCurrency } from '../common/HierarchyShared';
 
-// --- TYPE DEFINITIONS FOR HIERARCHY ---
-
-// This interface is now aligned with the service response
 interface PositionableItem extends AvailableReceptionItem {}
 
-interface HierarchicalItem extends PositionableItem {
-  // Inherits all properties
-}
-
-interface HierarchicalTransactionGroup {
-  type: string;
-  items: HierarchicalItem[];
-  itemCount: number;
-}
-
-interface HierarchicalPositionGroup {
-  id: string;
-  baseItemName: string;
-  transactions: HierarchicalTransactionGroup[];
-  itemCount: number;
-}
-
-interface HierarchicalWorkGroup {
-  id: string;
-  workGroup: string;
-  positions: HierarchicalPositionGroup[];
-  itemCount: number;
-}
-
-// Represents a top-level group from the user's reference (e.g., "Двигатель 1", "Двигатель 2")
 interface HierarchicalTopLevelGroup {
   id: string;
   positionNumber: number;
@@ -39,157 +13,24 @@ interface HierarchicalTopLevelGroup {
     service_description: string;
     subdivision: string | null;
   };
-  workGroups: HierarchicalWorkGroup[];
+  workGroups: Array<{
+    id: string;
+    workGroup: string;
+    positions: Array<{
+      id: string;
+      baseItemName: string;
+      incomeItems: PositionableItem[];
+      expenseItems: PositionableItem[];
+    }>;
+  }>;
   itemCount: number;
   allItemIds: string[];
 }
-
-// --- HELPER FUNCTIONS ---
 
 const getBaseItemName = (description: string): string => {
   return description;
 };
 
-// --- HIERARCHY COMPONENTS ---
-
-const ItemRow: React.FC<{
-  item: HierarchicalItem;
-  isSelected: boolean;
-  onToggle: () => void;
-}> = ({ item, isSelected, onToggle }) => {
-  const totalAmount = item.price * item.quantity;
-  return (
-    <div className="flex items-start pl-4 py-1.5">
-      <input
-        type="checkbox"
-        checked={isSelected}
-        onChange={onToggle}
-        onClick={(e) => e.stopPropagation()}
-        className="rounded border-slate-400 text-blue-600 mr-4 mt-1 flex-shrink-0 focus:ring-blue-500"
-      />
-      <div className="flex-grow min-w-0">
-        <p className="text-sm text-slate-800">{item.item_description}</p>
-        <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 mt-1">
-          <span>Кол-во: {item.quantity}</span>
-          <span>Цена: {item.price.toLocaleString('ru-RU')} ₽</span>
-          <span className="font-medium text-slate-600">
-            Сумма: {totalAmount.toLocaleString('ru-RU')} ₽
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const TransactionTypeGroup: React.FC<{
-  group: HierarchicalTransactionGroup;
-  selectedItemIds: Set<string>;
-  onToggleItem: (itemId: string) => void;
-}> = ({ group, selectedItemIds, onToggleItem }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
-  const typeColor = group.type === 'Приход' ? 'text-green-700' : 'text-red-700';
-
-  return (
-    <div>
-      <div
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center cursor-pointer py-1 group hover:bg-slate-50 rounded px-2"
-      >
-        <div className="text-slate-400 group-hover:text-slate-800">
-          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-        </div>
-        <h5 className={`text-sm font-medium ml-1 ${typeColor}`}>{group.type}</h5>
-        <span className="text-sm text-slate-500 ml-auto">({group.itemCount})</span>
-      </div>
-      {isExpanded && (
-        <div className="mt-1 pl-4 border-l-2 border-slate-200">
-          {group.items.map((item) => (
-            <ItemRow
-              key={item.id}
-              item={item}
-              isSelected={selectedItemIds.has(item.id)}
-              onToggle={() => onToggleItem(item.id)}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const PositionGroup: React.FC<{
-  group: HierarchicalPositionGroup;
-  selectedItemIds: Set<string>;
-  onToggleItem: (itemId: string) => void;
-}> = ({ group, selectedItemIds, onToggleItem }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
-
-  return (
-    <div>
-      <div
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center cursor-pointer py-1.5 group hover:bg-slate-50 rounded px-2"
-      >
-        <div className="text-slate-500 group-hover:text-slate-900">
-          {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-        </div>
-        <h4 className="text-sm text-slate-800 ml-2 flex-grow min-w-0">
-          {group.baseItemName}
-        </h4>
-        <span className="text-sm text-slate-500 ml-auto">({group.itemCount})</span>
-      </div>
-      {isExpanded && (
-        <div className="space-y-1 mt-1 pl-6">
-          {group.transactions.map((transaction) => (
-            <TransactionTypeGroup
-              key={transaction.type}
-              group={transaction}
-              selectedItemIds={selectedItemIds}
-              onToggleItem={onToggleItem}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const WorkGroup: React.FC<{
-  group: HierarchicalWorkGroup;
-  selectedItemIds: Set<string>;
-  onToggleItem: (itemId: string) => void;
-}> = ({ group, selectedItemIds, onToggleItem }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
-
-  return (
-    <div className="py-2">
-      <div
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center cursor-pointer py-1.5 group hover:bg-blue-50 rounded px-2"
-      >
-        <div className="text-slate-500 group-hover:text-slate-900">
-          {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-        </div>
-        <h3 className="text-base font-medium text-slate-800 ml-2 flex-grow min-w-0">
-          {group.workGroup}
-        </h3>
-        <span className="text-base text-slate-500 ml-auto">({group.itemCount})</span>
-      </div>
-      {isExpanded && (
-        <div className="space-y-2 mt-2 pl-4">
-          {group.positions.map((pos) => (
-            <PositionGroup
-              key={pos.id}
-              group={pos}
-              selectedItemIds={selectedItemIds}
-              onToggleItem={onToggleItem}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
 
 const PositionCard: React.FC<{
   group: HierarchicalTopLevelGroup;
@@ -260,9 +101,11 @@ const PositionCard: React.FC<{
       {isExpanded && (
         <div className="pb-3 mt-1 px-4 pl-14">
           {group.workGroups.map((workGroup) => (
-            <WorkGroup
+            <UnifiedWorkGroup
               key={workGroup.id}
-              group={workGroup}
+              workGroup={workGroup.workGroup}
+              positions={workGroup.positions}
+              mode="selection"
               selectedItemIds={selectedItemIds}
               onToggleItem={onToggleItem}
             />
@@ -293,6 +136,7 @@ export const UPDItemsHierarchy: React.FC<UPDItemsHierarchyProps> = ({
   const handleTogglePosition = (itemIds: string[]) => {
     onToggleMultiple(itemIds);
   };
+
   const hierarchicalData: HierarchicalTopLevelGroup[] = useMemo(() => {
     const positionMap = new Map<number, PositionableItem[]>();
     items.forEach((item) => {
@@ -312,7 +156,7 @@ export const UPDItemsHierarchy: React.FC<UPDItemsHierarchyProps> = ({
         workGroupMap.get(workGroupName)!.push(item);
       });
 
-      const workGroups: HierarchicalWorkGroup[] = Array.from(workGroupMap.entries()).map(
+      const workGroups = Array.from(workGroupMap.entries()).map(
         ([workGroupName, workItems]) => {
           const positionMap = new Map<string, PositionableItem[]>();
           workItems.forEach((item) => {
@@ -321,28 +165,29 @@ export const UPDItemsHierarchy: React.FC<UPDItemsHierarchyProps> = ({
             positionMap.get(baseName)!.push(item);
           });
 
-          const positions: HierarchicalPositionGroup[] = Array.from(positionMap.entries()).map(
+          const positions = Array.from(positionMap.entries()).map(
             ([baseName, posItems]) => {
-              const transactionMap = new Map<string, PositionableItem[]>();
-              posItems.forEach((item) => {
-                const type = item.transaction_type || 'Неопределено';
-                if (!transactionMap.has(type)) transactionMap.set(type, []);
-                transactionMap.get(type)!.push(item);
-              });
-
-              const transactions: HierarchicalTransactionGroup[] = Array.from(transactionMap.entries()).map(
-                ([type, transactionItems]) => ({
-                  type,
-                  items: transactionItems,
-                  itemCount: transactionItems.length,
-                })
+              const incomeItems = posItems.filter(item =>
+                item.transaction_type === 'Приход' || item.transaction_type === 'Доходы'
+              );
+              const expenseItems = posItems.filter(item =>
+                item.transaction_type !== 'Приход' && item.transaction_type !== 'Доходы'
               );
 
-              return { id: baseName, baseItemName: baseName, transactions, itemCount: posItems.length };
+              return {
+                id: baseName,
+                baseItemName: baseName,
+                incomeItems,
+                expenseItems,
+              };
             }
           );
 
-          return { id: workGroupName, workGroup: workGroupName, positions, itemCount: workItems.length };
+          return {
+            id: workGroupName,
+            workGroup: workGroupName,
+            positions,
+          };
         }
       );
 
@@ -397,7 +242,7 @@ export const UPDItemsHierarchy: React.FC<UPDItemsHierarchyProps> = ({
           <div className="text-right">
             <p className="text-sm text-slate-600">Сумма выбранных позиций:</p>
             <p className="text-lg font-bold text-slate-900">
-              {totalSelectedAmount.toLocaleString('ru-RU')} ₽
+              {formatCurrency(totalSelectedAmount)}
             </p>
           </div>
         )}
