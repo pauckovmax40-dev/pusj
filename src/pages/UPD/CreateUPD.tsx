@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileText, Calendar } from 'lucide-react';
+import { FileText, Calendar } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
+import { AppLayout } from '../../components/Layout/AppLayout';
 import { UPDItemsHierarchy } from '../../components/UPD/UPDItemsHierarchy';
 import {
   getAvailableReceptionItems,
@@ -201,35 +202,27 @@ export default function CreateUPD() {
     selectedItemIds.size > 0;
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/upd')}
-          className="mb-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Назад к списку УПД
-        </Button>
-        <h1 className="text-3xl font-bold text-slate-900">Создание нового УПД</h1>
-        <p className="text-slate-600 mt-2">
-          Выберите контрагента и позиции для формирования документа
-        </p>
-      </div>
+    <AppLayout
+      title="Создание нового УПД"
+      breadcrumbs={[
+        { label: 'Сборка УПД', path: '/upd' },
+        { label: 'Новый Заказ', path: '/upd/create' },
+      ]}
+    >
+      <div className="space-y-6">
+        {error && (
+          <Alert variant="error" onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
 
-      {error && (
-        <Alert variant="error" className="mb-6">
-          {error}
-        </Alert>
-      )}
+        {success && (
+          <Alert variant="success" onClose={() => setSuccess(false)}>
+            УПД успешно создан! Перенаправление...
+          </Alert>
+        )}
 
-      {success && (
-        <Alert variant="success" className="mb-6">
-          УПД успешно создан! Перенаправление...
-        </Alert>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">
             Фильтры
@@ -369,7 +362,8 @@ export default function CreateUPD() {
             </div>
           </>
         )}
-      </form>
-    </div>
+        </form>
+      </div>
+    </AppLayout>
   );
 }
